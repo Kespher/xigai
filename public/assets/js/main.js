@@ -7,6 +7,7 @@ const els = {
   quizUI: document.querySelector('#quiz-ui'),
   summaryUI: document.querySelector('#summary-ui'),
   wrongbookBtn: document.querySelector('#wrongbook-btn'),
+  exitWrongbookBtn: document.querySelector('#exit-wrongbook-btn'),
   progressText: document.querySelector('#progress-text'),
   progressBar: document.querySelector('#progress-bar'),
   statCorrect: document.querySelector('#stat-correct'),
@@ -42,8 +43,15 @@ const state = {
   userChoices: {},
   wrongIndices: [],
   stats: { correct: 0, wrong: 0 },
-  currentMultiSelection: []
+  currentMultiSelection: [],
+  mode: 'all'
 };
+
+function saveProgressIfAllMode() {
+  if (state.mode === 'all') {
+    saveProgress(state);
+  }
+}
 
 function shuffle(items) {
   return [...items].sort(() => Math.random() - 0.5);
@@ -208,7 +216,7 @@ function submitAnswer(choice) {
 
   updateStats();
   render();
-  saveProgress(state);
+  saveProgressIfAllMode(state);
 }
 
 function toggleMultiSelection(letter, button) {
@@ -232,7 +240,7 @@ function goToQuestion(delta) {
   if (target >= 0 && target < state.questions.length) {
     state.currentIndex = target;
     render();
-    saveProgress(state);
+    saveProgressIfAllMode(state);
   } else if (target >= state.questions.length) {
     showSummary();
   }
@@ -272,6 +280,8 @@ function restoreOrRestart() {
 
 function restart() {
   clearProgress();
+  state.mode = 'all';
+  setHidden(els.exitWrongbookBtn, true);
   state.questions = shuffle(questionDatabase);
   state.currentIndex = 0;
   state.userChoices = {};
@@ -287,6 +297,10 @@ function restart() {
 }
 
 async function loadWrongBookMode() {
+  if (state.mode === 'all') {
+    saveProgressIfAllMode(state);
+  }
+  
   els.wrongbookBtn.innerText = '加载中...';
 
   try {
@@ -315,6 +329,8 @@ async function loadWrongBookMode() {
     state.stats = { correct: 0, wrong: 0 };
     state.currentMultiSelection = [];
 
+    state.mode = 'wrongbook';
+    setHidden(els.exitWrongbookBtn, false);
     setHidden(els.summaryUI, true);
     setHidden(els.quizUI, false);
     setHidden(els.aiReportBox, true);
@@ -328,6 +344,33 @@ async function loadWrongBookMode() {
   } finally {
     els.wrongbookBtn.innerText = '错题本';
   }
+}
+
+function exitWrongBookMode() {
+  const savedState = loadProgress(questionDatabase);
+
+  state.mode = 'all';
+  setHidden(els.exitWrongbookBtn, true);
+
+  if (savedState) {
+    state.questions = savedState.questions;
+    state.currentIndex = savedState.currentIndex;
+    state.userChoices = savedState.userChoices;
+    state.wrongIndices = savedState.wrongIndices;
+    state.stats = savedState.stats;
+    state.currentMultiSelection = [];
+
+    setHidden(els.summaryUI, true);
+    setHidden(els.quizUI, false);
+    setHidden(els.aiReportBox, true);
+    els.aiReportBox.innerHTML = '';
+
+    updateStats();
+    render();
+    return;
+  }
+
+  restart();
 }
 
 async function runAIAction(action) {
@@ -366,6 +409,7 @@ async function generateReport() {
 function bindEvents() {
   els.restartBtn.addEventListener('click', restart);
   els.wrongbookBtn.addEventListener('click', loadWrongBookMode);
+  els.exitWrongbookBtn.addEventListener('click', exitWrongBookMode);
   els.summaryRestartBtn.addEventListener('click', restart);
   els.multiSubmitBtn.addEventListener('click', submitMultiAnswer);
   els.prevBtn.addEventListener('click', () => goToQuestion(-1));
