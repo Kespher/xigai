@@ -9,6 +9,6 @@
     "check": "node --check functions/api/ai.js && node --check public/assets/js/main.js"
   },
   "devDependencies": {
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.95.0"
   }
 }
