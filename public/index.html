@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>习概客观题题库 274 题专项训练 - AI 增强版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="/assets/css/app.css">
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-900">
+
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-black text-slate-800 tracking-tight mb-2">习概客观题刷题助手</h1>
+            <div class="flex items-center justify-center space-x-4 text-xs font-bold text-slate-400 uppercase flex-wrap gap-y-1">
+                <span>131 单选</span>
+                <span>•</span>
+                <span>112 多选</span>
+                <span>•</span>
+                <span>31 判断</span>
+                <span>•</span>
+                <span class="text-indigo-500">AI Powered</span>
+            </div>
+        </header>
+
+        <!-- 进度与状态 -->
+        <div id="quiz-ui" class="space-y-6">
+            <div class="flex items-center justify-between bg-white px-6 py-4 rounded-2xl shadow-sm border border-slate-100">
+                <div class="flex items-center space-x-4">
+                    <div class="flex flex-col">
+                        <span id="progress-text" class="text-lg font-black text-indigo-600">1 / 274</span>
+                    </div>
+                    <div class="w-24 md:w-48 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="h-full bg-indigo-500 transition-all duration-500" style="width: 0%;"></div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <span id="stat-correct" class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded">正: 0</span>
+                    <span id="stat-wrong" class="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded">误: 0</span>
+                    <button id="restart-btn" class="text-slate-300 hover:text-indigo-500 transition-colors" title="打乱并重新开始">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 题目卡片 -->
+            <div id="question-card" class="bg-white rounded-3xl shadow-xl p-6 md:p-10 min-h-[450px] flex flex-col border border-slate-100 animate-fade">
+                <div class="flex-grow">
+                    <div class="flex items-center justify-between mb-6">
+                        <span id="question-type-tag" class="px-2.5 py-1 rounded-md text-[10px] font-black tracking-wider bg-blue-50 text-blue-600">单选</span>
+                        <span id="orig-id" class="text-[10px] font-mono text-slate-300">原题号 #1</span>
+                    </div>
+                    <div id="question-stem" class="text-lg md:text-xl font-bold text-slate-800 leading-relaxed mb-8"></div>
+                    <div id="options-container" class="grid grid-cols-1 gap-3"></div>
+                </div>
+
+                <!-- 底部交互区域 -->
+                <div id="interaction-area" class="mt-8 pt-6 border-t border-slate-50">
+                    <!-- 多选确认 -->
+                    <div id="multi-submit-container" class="hidden mb-6">
+                        <button id="multi-submit-btn" class="w-full py-3 bg-indigo-600 text-white rounded-xl font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all">确认提交选择</button>
+                    </div>
+
+                    <!-- 反馈区 -->
+                    <div id="feedback-area" class="hidden mb-6">
+                        <div id="feedback-card" class="p-4 rounded-xl flex items-start space-x-3 border-2">
+                            <div id="feedback-icon" class="text-2xl mt-0.5">✅</div>
+                            <div class="flex-grow text-sm">
+                                <div id="feedback-title" class="font-black mb-0.5 text-green-800">完全正确！</div>
+                                <div id="feedback-body" class="text-slate-600">参考答案：A</div>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 mt-4 flex-wrap">
+                            <button id="ai-explain-btn" class="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors">✨ AI 深度讲考点</button>
+                            <button id="ai-mnemonic-btn" class="px-4 py-2 bg-purple-50 text-purple-700 rounded-lg text-xs font-bold hover:bg-purple-100 transition-colors">✨ 记忆口诀</button>
+                        </div>
+                    </div>
+
+                    <!-- AI 内容区 -->
+                    <div id="ai-response-box" class="hidden mb-6 p-5 bg-slate-50 rounded-2xl border border-slate-200 relative">
+                        <div id="ai-loading" class="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center rounded-2xl hidden">
+                             <div class="flex items-center space-x-2 text-indigo-600 font-bold text-sm">
+                                <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                <span>Gemini 老师正在翻看笔记...</span>
+                             </div>
+                        </div>
+                        <div id="ai-content" class="text-xs md:text-sm text-slate-700 prose-content"></div>
+                    </div>
+
+                    <!-- 导航按钮 -->
+                    <div class="flex justify-between items-center">
+                        <button id="prev-btn" class="flex items-center space-x-1 text-slate-400 font-bold hover:text-slate-800 disabled:opacity-20 transition-colors" disabled>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            <span>上一题</span>
+                        </button>
+                        <button id="next-btn" class="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-indigo-600 transition-all">下一题</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 总结页面 -->
+        <div id="summary-ui" class="hidden text-center bg-white rounded-3xl p-12 shadow-xl border border-slate-100 animate-fade">
+            <div class="text-7xl mb-6">🏆</div>
+            <h2 class="text-3xl font-black text-slate-800 mb-2">训练已完成</h2>
+            <p id="summary-text" class="text-slate-500 mb-8"></p>
+            <div class="flex flex-col items-center gap-4">
+                <button id="ai-report-btn" class="w-full max-w-xs bg-indigo-600 text-white py-4 rounded-xl font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all">✨ AI 生成复习周报</button>
+                <button id="summary-restart-btn" class="text-slate-400 font-bold underline">重头开始练习</button>
+            </div>
+            <div id="ai-report-box" class="hidden mt-8 text-left p-6 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-sm prose-content"></div>
+        </div>
+    </div>
+
+    <script type="module" src="/assets/js/main.js"></script>
+</body>
+</html>
