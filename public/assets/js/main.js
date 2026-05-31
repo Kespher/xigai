@@ -1,9 +1,11 @@
 import { questionDatabase } from './data/questions.js';
 import { requestAI } from './services/aiService.js';
+import { addWrongQuestion, getWrongBook } from './services/wrongbookService.js';
 
 const els = {
   quizUI: document.querySelector('#quiz-ui'),
   summaryUI: document.querySelector('#summary-ui'),
+  wrongbookBtn: document.querySelector('#wrongbook-btn'),
   progressText: document.querySelector('#progress-text'),
   progressBar: document.querySelector('#progress-bar'),
   statCorrect: document.querySelector('#stat-correct'),
@@ -197,6 +199,10 @@ function submitAnswer(choice) {
   } else {
     state.stats.wrong += 1;
     state.wrongIndices.push(state.currentIndex);
+
+    addWrongQuestion(question, normalizedChoice).catch((error) => {
+        console.error("错题保存失败：", error);
+    });
   }
 
   updateStats();
@@ -252,6 +258,50 @@ function restart() {
   render();
 }
 
+async function loadWrongBookMode() {
+  els.wrongbookBtn.innerText = '加载中...';
+
+  try {
+    const result = await getWrongBook();
+
+    if (!result.success) {
+      alert(result.error || '错题本加载失败');
+      return;
+    }
+
+    const wrongIds = result.data.map((item) => Number(item.question_id));
+
+    const wrongQuestions = questionDatabase.filter((question) =>
+      wrongIds.includes(Number(question.id))
+    );
+
+    if (wrongQuestions.length === 0) {
+      alert('当前错题本为空，强得可怕。');
+      return;
+    }
+
+    state.questions = wrongQuestions;
+    state.currentIndex = 0;
+    state.userChoices = {};
+    state.wrongIndices = [];
+    state.stats = { correct: 0, wrong: 0 };
+    state.currentMultiSelection = [];
+
+    setHidden(els.summaryUI, true);
+    setHidden(els.quizUI, false);
+    setHidden(els.aiReportBox, true);
+    els.aiReportBox.innerHTML = '';
+
+    updateStats();
+    render();
+  } catch (error) {
+    console.error(error);
+    alert('错题本加载失败，请稍后重试');
+  } finally {
+    els.wrongbookBtn.innerText = '错题本';
+  }
+}
+
 async function runAIAction(action) {
   const question = getCurrentQuestion();
   setHidden(els.aiResponseBox, false);
@@ -287,6 +337,7 @@ async function generateReport() {
 
 function bindEvents() {
   els.restartBtn.addEventListener('click', restart);
+  els.wrongbookBtn.addEventListener('click', loadWrongBookMode);
   els.summaryRestartBtn.addEventListener('click', restart);
   els.multiSubmitBtn.addEventListener('click', submitMultiAnswer);
   els.prevBtn.addEventListener('click', () => goToQuestion(-1));
@@ -295,6 +346,3 @@ function bindEvents() {
   els.aiMnemonicBtn.addEventListener('click', () => runAIAction('mnemonic'));
   els.aiReportBtn.addEventListener('click', generateReport);
 }
-
-bindEvents();
-restart();
