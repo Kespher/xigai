@@ -1,6 +1,7 @@
 import { questionDatabase } from './data/questions.js';
 import { requestAI } from './services/aiService.js';
 import { addWrongQuestion, getWrongBook } from './services/wrongbookService.js';
+import { saveProgress, loadProgress, clearProgress } from './services/progressService.js';
 
 const els = {
   quizUI: document.querySelector('#quiz-ui'),
@@ -207,6 +208,7 @@ function submitAnswer(choice) {
 
   updateStats();
   render();
+  saveProgress(state);
 }
 
 function toggleMultiSelection(letter, button) {
@@ -230,6 +232,7 @@ function goToQuestion(delta) {
   if (target >= 0 && target < state.questions.length) {
     state.currentIndex = target;
     render();
+    saveProgress(state);
   } else if (target >= state.questions.length) {
     showSummary();
   }
@@ -243,7 +246,32 @@ function showSummary() {
   els.summaryText.innerHTML = `共挑战 ${total} 道题目，<br>你答对了 ${state.stats.correct} 题，正确率 ${rate}%。`;
 }
 
+function restoreOrRestart() {
+  const savedState = loadProgress(questionDatabase);
+
+  if (savedState) {
+    state.questions = savedState.questions;
+    state.currentIndex = savedState.currentIndex;
+    state.userChoices = savedState.userChoices;
+    state.wrongIndices = savedState.wrongIndices;
+    state.stats = savedState.stats;
+    state.currentMultiSelection = [];
+
+    setHidden(els.summaryUI, true);
+    setHidden(els.quizUI, false);
+    setHidden(els.aiReportBox, true);
+    els.aiReportBox.innerHTML = '';
+
+    updateStats();
+    render();
+    return;
+  }
+
+  restart();
+}
+
 function restart() {
+  clearProgress();
   state.questions = shuffle(questionDatabase);
   state.currentIndex = 0;
   state.userChoices = {};
@@ -348,4 +376,4 @@ function bindEvents() {
 }
 
 bindEvents();
-restart();
+restoreOrRestart();
