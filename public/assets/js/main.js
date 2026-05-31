@@ -34,17 +34,29 @@ const els = {
   summaryText: document.querySelector('#summary-text'),
   aiReportBtn: document.querySelector('#ai-report-btn'),
   aiReportBox: document.querySelector('#ai-report-box'),
-  summaryRestartBtn: document.querySelector('#summary-restart-btn')
+  summaryRestartBtn: document.querySelector('#summary-restart-btn'),
+  sequentialModeBtn: document.querySelector('#sequential-mode-btn'),
+  randomModeBtn: document.querySelector('#random-mode-btn'),
+  questionNavPanel: document.querySelector('#question-nav-panel'),
+  questionNavContent: document.querySelector('#question-nav-content')
 };
 
 const state = {
   questions: [],
   currentIndex: 0,
-  userChoices: {},
-  wrongIndices: [],
+
+  // 用题目 id 记录答案，不再用 currentIndex
+  answerRecords: {},
+
+  wrongQuestionIds: [],
   stats: { correct: 0, wrong: 0 },
   currentMultiSelection: [],
-  mode: 'all'
+
+  // all / wrongbook
+  mode: 'all',
+
+  // random / sequential
+  orderMode: localStorage.getItem('xigai_order_mode') || 'random'
 };
 
 function saveProgressIfAllMode() {
@@ -55,6 +67,160 @@ function saveProgressIfAllMode() {
 
 function shuffle(items) {
   return [...items].sort(() => Math.random() - 0.5);
+}
+
+function buildQuestionList() {
+  if (state.orderMode === 'sequential') {
+    return [...questionDatabase];
+  }
+
+  return shuffle(questionDatabase);
+}
+
+function getTypeKey(type) {
+  if (type === '单选') return 'single';
+  if (type === '多选') return 'multiple';
+  if (type === '判断') return 'judge';
+  return 'other';
+}
+
+function getTypeTitle(typeKey) {
+  const map = {
+    single: '单选题',
+    multiple: '多选题',
+    judge: '判断题',
+    other: '其他'
+  };
+
+  return map[typeKey] || '其他';
+}
+
+function getQuestionNavClass(question) {
+  const record = state.answerRecords[question.id];
+
+  if (!record) {
+    return 'bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200';
+  }
+
+  if (record.isCorrect) {
+    return 'bg-green-500 text-white border-green-500 hover:bg-green-600';
+  }
+
+  return 'bg-red-500 text-white border-red-500 hover:bg-red-600';
+}
+
+function renderQuestionNav() {
+  if (
+    state.mode !== 'all' ||
+    state.orderMode !== 'sequential'
+  ) {
+    setHidden(els.questionNavPanel, true);
+    return;
+  }
+
+  setHidden(els.questionNavPanel, false);
+
+  const groups = {
+    single: [],
+    multiple: [],
+    judge: []
+  };
+
+  questionDatabase.forEach((question) => {
+    const typeKey = getTypeKey(question.type);
+
+    if (!groups[typeKey]) {
+      groups[typeKey] = [];
+    }
+
+    groups[typeKey].push(question);
+  });
+
+  els.questionNavContent.innerHTML = '';
+
+  Object.entries(groups).forEach(([typeKey, questions]) => {
+    if (questions.length === 0) return;
+
+    const groupEl = document.createElement('div');
+
+    groupEl.innerHTML = `
+      <h3 class="text-xs font-black text-slate-500 mb-2">
+        ${getTypeTitle(typeKey)}
+      </h3>
+      <div class="flex flex-wrap gap-2"></div>
+    `;
+
+    const buttonsContainer = groupEl.querySelector('div');
+
+    questions.forEach((question) => {
+      const index = state.questions.findIndex(
+        (item) => Number(item.id) === Number(question.id)
+      );
+
+      const btn = document.createElement('button');
+      btn.className = `
+        w-8 h-8 rounded-full border text-xs font-black
+        flex items-center justify-center transition-all
+        ${getQuestionNavClass(question)}
+      `;
+
+      btn.innerText = question.id;
+      btn.title = `第 ${question.id} 题`;
+
+      btn.addEventListener('click', () => {
+        if (index === -1) return;
+
+        state.currentIndex = index;
+        render();
+        saveProgressIfAllMode();
+      });
+
+      buttonsContainer.appendChild(btn);
+    });
+
+    els.questionNavContent.appendChild(groupEl);
+  });
+}
+
+function switchOrderMode(orderMode) {
+  if (state.mode === 'wrongbook') {
+    alert('错题本模式下暂不切换顺序/乱序，请先退出错题本。');
+    return;
+  }
+
+  state.orderMode = orderMode;
+  localStorage.setItem('xigai_order_mode', orderMode);
+
+  state.questions = buildQuestionList();
+  state.currentIndex = 0;
+  state.answerRecords = {};
+  state.wrongQuestionIds = [];
+  state.stats = { correct: 0, wrong: 0 };
+  state.currentMultiSelection = [];
+
+  clearProgress();
+
+  setHidden(els.summaryUI, true);
+  setHidden(els.quizUI, false);
+  setHidden(els.aiReportBox, true);
+  els.aiReportBox.innerHTML = '';
+
+  updateModeButtons();
+  updateStats();
+  render();
+}
+
+function updateModeButtons() {
+  const activeClass = 'text-indigo-600 bg-indigo-50';
+  const inactiveClass = 'text-slate-600 bg-slate-100';
+
+  if (state.orderMode === 'sequential') {
+    els.sequentialModeBtn.className = `text-xs font-bold px-2 py-1 rounded hover:bg-indigo-100 transition-colors ${activeClass}`;
+    els.randomModeBtn.className = `text-xs font-bold px-2 py-1 rounded hover:bg-slate-200 transition-colors ${inactiveClass}`;
+  } else {
+    els.sequentialModeBtn.className = `text-xs font-bold px-2 py-1 rounded hover:bg-slate-200 transition-colors ${inactiveClass}`;
+    els.randomModeBtn.className = `text-xs font-bold px-2 py-1 rounded hover:bg-indigo-100 transition-colors ${activeClass}`;
+  }
 }
 
 function setHidden(element, hidden) {
@@ -117,7 +283,7 @@ function createOptionButton(question, optionText, optionIndex) {
   button.className = 'option-btn w-full text-left p-5 border-2 border-slate-100 rounded-2xl flex items-center font-bold text-slate-700 bg-white shadow-sm hover:shadow-md transition-all';
 
   let iconClass = 'bg-slate-100 text-slate-400';
-  const answerRecord = state.userChoices[state.currentIndex];
+  const answerRecord = state.answerRecords[question.id];
 
   if (answerRecord) {
     button.disabled = true;
@@ -143,6 +309,7 @@ function createOptionButton(question, optionText, optionIndex) {
       toggleMultiSelection(letter, button);
       return;
     }
+
     submitAnswer(letter);
   });
 
@@ -157,18 +324,27 @@ function renderOptions(question) {
 }
 
 function renderFeedback(question) {
-  const answerRecord = state.userChoices[state.currentIndex];
+  const answerRecord = state.answerRecords[question.id];
+
   if (!answerRecord) {
     setHidden(els.feedbackArea, true);
     return;
   }
 
   setHidden(els.feedbackArea, false);
-  const isAllCorrect = normalizeAnswer(answerRecord.choice) === normalizeAnswer(question.answer);
-  els.feedbackCard.className = `p-4 rounded-xl flex items-start space-x-3 border-2 ${isAllCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`;
+
+  const isAllCorrect =
+    normalizeAnswer(answerRecord.choice) === normalizeAnswer(question.answer);
+
+  els.feedbackCard.className = `p-4 rounded-xl flex items-start space-x-3 border-2 ${
+    isAllCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+  }`;
+
   els.feedbackIcon.innerText = isAllCorrect ? '✅' : '❌';
   els.feedbackTitle.innerText = isAllCorrect ? '完全正确！' : '回答错误';
-  els.feedbackTitle.className = `font-black mb-0.5 ${isAllCorrect ? 'text-green-800' : 'text-red-800'}`;
+  els.feedbackTitle.className = `font-black mb-0.5 ${
+    isAllCorrect ? 'text-green-800' : 'text-red-800'
+  }`;
   els.feedbackBody.innerText = `参考答案：${formatAnswer(question)}`;
 }
 
@@ -188,11 +364,12 @@ function render() {
   setTypeTag(question.type);
   renderOptions(question);
 
-  const hasAnswered = Boolean(state.userChoices[state.currentIndex]);
+  const hasAnswered = Boolean(state.answerRecords[question.id]);
   setHidden(els.multiSubmitContainer, question.type !== '多选' || hasAnswered);
   setHidden(els.aiResponseBox, true);
   state.currentMultiSelection = [];
   renderFeedback(question);
+  renderQuestionNav();
 }
 
 function submitAnswer(choice) {
@@ -200,31 +377,41 @@ function submitAnswer(choice) {
   const normalizedChoice = normalizeAnswer(choice);
   const isCorrect = normalizedChoice === normalizeAnswer(question.answer);
 
-  if (state.userChoices[state.currentIndex]) return;
+  if (state.answerRecords[question.id]) return;
 
-  state.userChoices[state.currentIndex] = { choice: normalizedChoice, isCorrect };
+  state.answerRecords[question.id] = {
+    choice: normalizedChoice,
+    isCorrect
+  };
+
   if (isCorrect) {
     state.stats.correct += 1;
   } else {
     state.stats.wrong += 1;
-    state.wrongIndices.push(state.currentIndex);
+    state.wrongQuestionIds.push(question.id);
 
     addWrongQuestion(question, normalizedChoice).catch((error) => {
-        console.error("错题保存失败：", error);
+      console.error('错题保存失败：', error);
     });
   }
 
   updateStats();
   render();
-  saveProgressIfAllMode(state);
+  renderQuestionNav();
+  saveProgressIfAllMode();
 }
 
 function toggleMultiSelection(letter, button) {
-  if (state.userChoices[state.currentIndex]) return;
+  const question = getCurrentQuestion();
+
+  if (state.answerRecords[question.id]) return;
 
   button.classList.toggle('multi-selected');
+
   if (state.currentMultiSelection.includes(letter)) {
-    state.currentMultiSelection = state.currentMultiSelection.filter((item) => item !== letter);
+    state.currentMultiSelection = state.currentMultiSelection.filter(
+      (item) => item !== letter
+    );
   } else {
     state.currentMultiSelection.push(letter);
   }
@@ -237,10 +424,11 @@ function submitMultiAnswer() {
 
 function goToQuestion(delta) {
   const target = state.currentIndex + delta;
+
   if (target >= 0 && target < state.questions.length) {
     state.currentIndex = target;
     render();
-    saveProgressIfAllMode(state);
+    saveProgressIfAllMode();
   } else if (target >= state.questions.length) {
     showSummary();
   }
@@ -260,10 +448,13 @@ function restoreOrRestart() {
   if (savedState) {
     state.questions = savedState.questions;
     state.currentIndex = savedState.currentIndex;
-    state.userChoices = savedState.userChoices;
-    state.wrongIndices = savedState.wrongIndices;
+    state.answerRecords = savedState.answerRecords;
+    state.wrongQuestionIds = savedState.wrongQuestionIds;
     state.stats = savedState.stats;
+    state.orderMode = savedState.orderMode || 'random';
     state.currentMultiSelection = [];
+    localStorage.setItem('xigai_order_mode', state.orderMode);
+    updateModeButtons();
 
     setHidden(els.summaryUI, true);
     setHidden(els.quizUI, false);
@@ -280,18 +471,22 @@ function restoreOrRestart() {
 
 function restart() {
   clearProgress();
+
   state.mode = 'all';
   setHidden(els.exitWrongbookBtn, true);
-  state.questions = shuffle(questionDatabase);
+
+  state.questions = buildQuestionList();
   state.currentIndex = 0;
-  state.userChoices = {};
-  state.wrongIndices = [];
+  state.answerRecords = {};
+  state.wrongQuestionIds = [];
   state.stats = { correct: 0, wrong: 0 };
   state.currentMultiSelection = [];
+
   setHidden(els.summaryUI, true);
   setHidden(els.quizUI, false);
   setHidden(els.aiReportBox, true);
   els.aiReportBox.innerHTML = '';
+
   updateStats();
   render();
 }
@@ -324,8 +519,8 @@ async function loadWrongBookMode() {
 
     state.questions = wrongQuestions;
     state.currentIndex = 0;
-    state.userChoices = {};
-    state.wrongIndices = [];
+    state.answerRecords = {};
+    state.wrongQuestionIds = [];
     state.stats = { correct: 0, wrong: 0 };
     state.currentMultiSelection = [];
 
@@ -355,10 +550,14 @@ function exitWrongBookMode() {
   if (savedState) {
     state.questions = savedState.questions;
     state.currentIndex = savedState.currentIndex;
-    state.userChoices = savedState.userChoices;
-    state.wrongIndices = savedState.wrongIndices;
-    state.stats = savedState.stats;
+    state.answerRecords = savedState.answerRecords || {};
+    state.wrongQuestionIds = savedState.wrongQuestionIds || [];
+    state.stats = savedState.stats || { correct: 0, wrong: 0 };
+    state.orderMode = savedState.orderMode || 'random';
     state.currentMultiSelection = [];
+
+    localStorage.setItem('xigai_order_mode', state.orderMode);
+    updateModeButtons();
 
     setHidden(els.summaryUI, true);
     setHidden(els.quizUI, false);
@@ -392,7 +591,13 @@ async function runAIAction(action) {
 async function generateReport() {
   setHidden(els.aiReportBox, false);
   els.aiReportBox.innerHTML = 'AI 正在分析你的错题模型...';
-  const wrongQuestions = state.wrongIndices.slice(0, 12).map((index) => state.questions[index]);
+
+  const wrongQuestions = state.wrongQuestionIds
+    .slice(0, 12)
+    .map((id) =>
+      state.questions.find((question) => Number(question.id) === Number(id))
+    )
+    .filter(Boolean);
 
   try {
     const text = await requestAI('report', {
@@ -400,6 +605,7 @@ async function generateReport() {
       total: state.questions.length,
       wrongQuestions
     });
+
     renderMarkdown(els.aiReportBox, text);
   } catch (error) {
     els.aiReportBox.innerText = error.message || '报告生成失败。';
@@ -417,7 +623,14 @@ function bindEvents() {
   els.aiExplainBtn.addEventListener('click', () => runAIAction('explain'));
   els.aiMnemonicBtn.addEventListener('click', () => runAIAction('mnemonic'));
   els.aiReportBtn.addEventListener('click', generateReport);
+  els.sequentialModeBtn.addEventListener('click', () => {
+    switchOrderMode('sequential');
+  });
+  els.randomModeBtn.addEventListener('click', () => {
+    switchOrderMode('random');
+  });
 }
 
 bindEvents();
+updateModeButtons();
 restoreOrRestart();

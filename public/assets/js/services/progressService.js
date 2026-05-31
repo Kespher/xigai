@@ -4,9 +4,10 @@ export function saveProgress(state) {
   const payload = {
     questionIds: state.questions.map((question) => question.id),
     currentIndex: state.currentIndex,
-    userChoices: state.userChoices,
-    wrongIndices: state.wrongIndices,
-    stats: state.stats,
+    answerRecords: state.answerRecords || {},
+    wrongQuestionIds: state.wrongQuestionIds || [],
+    stats: state.stats || { correct: 0, wrong: 0 },
+    orderMode: state.orderMode || 'random',
     savedAt: Date.now(),
   };
 
@@ -39,12 +40,27 @@ export function loadProgress(questionDatabase) {
       return null;
     }
 
+    const currentIndex = Math.min(
+      Math.max(Number(payload.currentIndex) || 0, 0),
+      questions.length - 1
+    );
+
+    const orderMode = ['random', 'sequential'].includes(payload.orderMode)
+      ? payload.orderMode
+      : 'random';
+
     return {
       questions,
-      currentIndex: payload.currentIndex || 0,
-      userChoices: payload.userChoices || {},
-      wrongIndices: payload.wrongIndices || [],
+      currentIndex,
+
+      // 新版字段
+      answerRecords: payload.answerRecords || payload.userChoices || {},
+
+      // 新版字段
+      wrongQuestionIds: payload.wrongQuestionIds || payload.wrongIndices || [],
+
       stats: payload.stats || { correct: 0, wrong: 0 },
+      orderMode,
       currentMultiSelection: [],
     };
   } catch (error) {
