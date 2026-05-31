@@ -346,3 +346,6 @@ function bindEvents() {
   els.aiMnemonicBtn.addEventListener('click', () => runAIAction('mnemonic'));
   els.aiReportBtn.addEventListener('click', generateReport);
 }
+
+bindEvents();
+restart();
