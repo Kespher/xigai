@@ -1671,7 +1671,7 @@ export const questionDatabase = [
       "推动国际关系民主化",
       "加强文明交流互鉴"
     ],
-    "answer": "AB",
+    "answer": "ABCD",
     "type": "多选",
     "point": "0.3",
     "difficulty": "medium"
