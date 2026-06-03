@@ -3015,7 +3015,7 @@ export const questionDatabase = [
   {
     "id": 233,
     "originId": 1640451,
-    "stem": "培养入才是国家和民族长远发展大计。",
+    "stem": "培养人才是国家和民族长远发展大计。",
     "options": [
       "是",
       "否"
