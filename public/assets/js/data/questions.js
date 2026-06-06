@@ -1785,7 +1785,7 @@ export const questionDatabase = [
   {
     "id": 138,
     "originId": 1640166,
-    "stem": "实施就业优先战略,必须（ ）。",
+    "stem": "实施就业优先战略，必须（ ）。",
     "options": [
       "健全就业公共服务体系",
       "完善重点群体就业支持体系",
