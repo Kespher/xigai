@@ -944,7 +944,7 @@ export const questionDatabase = [
   {
     "id": 73,
     "originId": 1639971,
-    "stem": "( )首次把“小康”作为经济建设总的奋斗目标。",
+    "stem": "（）首次把“小康”作为经济建设总的奋斗目标。",
     "options": [
       "党的十七大",
       "党的十五大",
