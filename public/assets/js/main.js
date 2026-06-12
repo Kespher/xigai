@@ -376,7 +376,7 @@ function render() {
   renderQuestionNav();
 }
 
-function  {
+function  submitAnswer(choice) {
   const question = getCurrentQuestion();
   const normalizedChoice = normalizeAnswer(choice);
   const isCorrect = normalizedChoice === normalizeAnswer(question.answer);
