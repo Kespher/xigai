@@ -1,6 +1,10 @@
 import { questionDatabase } from './data/questions.js';
 import { requestAI } from './services/aiService.js';
-import { addWrongQuestion, getWrongBook } from './services/wrongbookService.js';
+import {
+  addWrongQuestion,
+  getWrongBook,
+  markAsMastered
+} from './services/wrongbookService.js';
 import { saveProgress, loadProgress, clearProgress } from './services/progressService.js';
 
 const els = {
@@ -372,7 +376,7 @@ function render() {
   renderQuestionNav();
 }
 
-function submitAnswer(choice) {
+function  {
   const question = getCurrentQuestion();
   const normalizedChoice = normalizeAnswer(choice);
   const isCorrect = normalizedChoice === normalizeAnswer(question.answer);
