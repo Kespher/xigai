@@ -80,6 +80,7 @@ export async function onRequestOptions() {
 
 export async function onRequestPost({ request, env }) {
   let body;
+
   try {
     body = await request.json();
   } catch {
@@ -88,37 +89,56 @@ export async function onRequestPost({ request, env }) {
 
   const { action, payload } = body;
   const validationError = validatePayload(action, payload);
+
   if (validationError) {
     return json({ error: validationError }, { status: 400 });
   }
 
-  if (!env.GEMINI_API_KEY) {
-    return json({ error: 'AI 服务还没配置 GEMINI_API_KEY。静态刷题可用，AI 讲解需要在 Cloudflare 环境变量里添加密钥。' }, { status: 503 });
+  if (!env.DEEPSEEK_API_KEY) {
+    return json({
+      error: 'AI 服务还没配置 DEEPSEEK_API_KEY。静态刷题可用，AI 讲解需要在 Cloudflare 环境变量里添加密钥。'
+    }, { status: 503 });
   }
 
   const config = ACTION_CONFIG[action];
-  const model = env.GEMINI_MODEL || 'gemini-3.5-flash';
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const model = env.DEEPSEEK_MODEL || 'deepseek-v4-flash';
 
-  const upstream = await fetch(endpoint, {
+  const upstream = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-goog-api-key': env.GEMINI_API_KEY
+      'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}`,
     },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: config.buildPrompt(payload) }] }],
-      systemInstruction: { parts: [{ text: config.system }] },
-      generationConfig: { temperature: action === 'mnemonic' ? 0.75 : 0.35 }
-    })
+      model,
+      messages: [
+        {
+          role: 'system',
+          content: config.system,
+        },
+        {
+          role: 'user',
+          content: config.buildPrompt(payload),
+        },
+      ],
+      temperature: action === 'mnemonic' ? 0.75 : 0.35,
+      stream: false,
+      thinking: {
+        type: 'disabled',
+      },
+    }),
   });
 
   const data = await upstream.json().catch(() => ({}));
+
   if (!upstream.ok) {
-    return json({ error: data.error?.message || 'Gemini API 请求失败，请检查模型名称、API Key 或账单状态。' }, { status: upstream.status });
+    return json({
+      error: data.error?.message || 'DeepSeek API 请求失败，请检查模型名称、API Key 或余额状态。'
+    }, { status: upstream.status });
   }
 
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = data.choices?.[0]?.message?.content;
+
   return json({ text: text || 'AI 暂时没有返回内容。' });
 }
 
