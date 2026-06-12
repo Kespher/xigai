@@ -390,10 +390,19 @@ function  {
 
   if (isCorrect) {
     state.stats.correct += 1;
+  
+    if (state.mode === 'wrongbook') {
+      markAsMastered(question.id).catch((error) => {
+        console.error('错题移除失败：', error);
+      });
+    }
   } else {
     state.stats.wrong += 1;
-    state.wrongQuestionIds.push(question.id);
-
+  
+    if (!state.wrongQuestionIds.includes(question.id)) {
+      state.wrongQuestionIds.push(question.id);
+    }
+  
     addWrongQuestion(question, normalizedChoice).catch((error) => {
       console.error('错题保存失败：', error);
     });
