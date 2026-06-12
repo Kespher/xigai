@@ -2469,14 +2469,14 @@ export const questionDatabase = [
   {
     "id": 192,
     "originId": 1640328,
-    "stem": "( ）是最大的民生工程、民心工程、根基工程，是社会稳定的重要保障。",
+    "stem": "（ ）是最大的民生工程、民心工程、根基工程，是社会稳定的重要保障。",
     "options": [
       "生产",
       "共同富裕",
       "就业",
       "生活水平"
     ],
-    "answer": "B",
+    "answer": "C",
     "type": "单选",
     "point": "0.3",
     "difficulty": "medium"
