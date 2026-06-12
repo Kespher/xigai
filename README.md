@@ -58,8 +58,8 @@ npm run dev
    - Build command：留空
    - Build output directory：`public`
 5. 环境变量里添加：
-   - `GEMINI_API_KEY`：你的 Gemini API Key
-   - `GEMINI_MODEL`：可选，默认 `gemini-3.5-flash`
+   - `DEEPSEEK_API_KEY`：你的 DeepSeek API Key
+   - `DEEPSEEK_MODEL`：可选，默认 `deepseek-v4-flash`
 6. 部署。
 
 ### 方式 B：Wrangler 命令行
