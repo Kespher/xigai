@@ -1686,7 +1686,7 @@ export const questionDatabase = [
       "群众基础的广泛",
       "执政本领的增强"
     ],
-    "answer": "AB",
+    "answer": "AD",
     "type": "多选",
     "point": "0.3",
     "difficulty": "medium"
